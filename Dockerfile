@@ -45,13 +45,16 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -yqq xserve
 RUN apt-get update && apt-get install -y xwayland
 
 # Install ROS packages
-RUN apt install -y python-rosinstall python-rosinstall-generator python-wstool build-essential python3-pip python-pip python-catkin-tools
-RUN apt install -y ros-melodic-ros-tutorials ros-melodic-turtlebot3 ros-melodic-turtlebot3-simulations ros-melodic-navigation libspatialindex-dev libqt4-dev
+RUN apt install -y build-essential python3-pip python-pip python-catkin-tools
+RUN apt install -y ros-melodic-turtlebot3 ros-melodic-turtlebot3-msgs ros-melodic-turtlebot3-simulations 
+RUN apt install -y ros-melodic-navigation ros-melodic-nav-msgs
+RUN apt install -y libspatialindex-dev libqt4-dev
 RUN apt install -y ros-melodic-rqt ros-melodic-rqt-common-plugins ros-melodic-turtlesim
-RUN apt install -y ros-melodic-tf-conversions
+RUN apt install -y ros-melodic-tf-conversions ros-melodic-geometry2
 RUN apt install -y ros-melodic-turtle-tf2 ros-melodic-tf2-tools ros-melodic-tf
 RUN apt-get install -y ros-melodic-gazebo-ros-pkgs ros-melodic-gazebo-ros-control
-RUN apt-get update && apt-get install -y ros-melodic-rviz
+RUN apt-get install -y ros-melodic-rviz
+RUN apt-get install -y ros-melodic-hector-slam
 
 # Set workdir
 WORKDIR /root/irob_ws
