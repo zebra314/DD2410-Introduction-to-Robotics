@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 import rospy
 import actionlib
 import irob_assignment_1.msg
@@ -83,7 +83,7 @@ if __name__ == "__main__":
 
     # Init publisher
 
-    # Init simple action server
+    # Init simple action client
 
     # Init service client
 

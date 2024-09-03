@@ -83,7 +83,7 @@ You can use RQT for more specialized analysis. You can show the node graph, TF t
 
 ### ROS cheat sheet
 
-You can find a useful ROS cheat sheet [here](https://github.com/ros/cheatsheet/releases/). As you can see it is for ROS Indigo, however everything seems to be the same for Melodic.
+You can find a useful ROS cheat sheet [here](https://github.com/ros/cheatsheet/releases/). As you can see it is for ROS Indigo, however everything seems to be the same for noetic.
 
 ### When you need help with ROS
 
@@ -99,11 +99,11 @@ Now we will start with the practical part of the assignment.
 
 ### What we use in this course
 
-* Ubuntu __18.04__
-* ROS __Melodic__
+* Ubuntu __20.04__
+* ROS __Noetic__
 * Python
   * Version 2.7
-  * Default with ROS Melodic
+  * Default with ROS noetic
 
 If you are interested you can read more [here](http://www.ros.org/reps/rep-0003.html).
 
@@ -117,14 +117,14 @@ Everything is installed for you in computer labs:
 #### Own computer
 
 ```bash
-# Install ROS Melodic desktop full
+# Install ROS Noetic desktop full
 sudo sh -c 'echo "deb http://packages.ros.org/ros/ubuntu $(lsb_release -sc) main" > /etc/apt/sources.list.d/ros-latest.list'
 
 sudo apt-key adv --keyserver 'hkp://keyserver.ubuntu.com:80' --recv-key C1CF6E31E6BADE8868B172B4F42ED6FBAB17C654
 
 sudo apt update
 
-sudo apt install ros-melodic-desktop-full
+sudo apt install ros-noetic-desktop-full
 
 sudo rosdep init
 
@@ -134,11 +134,11 @@ sudo apt install python-rosinstall python-rosinstall-generator python-wstool bui
 
 # Install ROS packages and such for assignment 1
 
-sudo apt install ros-melodic-ros-tutorials ros-melodic-turtlebot3 ros-melodic-turtlebot3-simulations ros-melodic-navigation libspatialindex-dev libqt4-dev
+sudo apt install ros-noetic-ros-tutorials ros-noetic-turtlebot3 ros-noetic-turtlebot3-simulations ros-noetic-navigation libspatialindex-dev libqt4-dev
 
-sudo apt install ros-melodic-rqt ros-melodic-rqt-common-plugins ros-melodic-turtlesim
+sudo apt install ros-noetic-rqt ros-noetic-rqt-common-plugins ros-noetic-turtlesim
 
-sudo apt install ros-melodic-turtle-tf2 ros-melodic-tf2-tools ros-melodic-tf
+sudo apt install ros-noetic-turtle-tf2 ros-noetic-tf2-tools ros-noetic-tf
 
 pip install rtree sklearn
 ```
@@ -156,10 +156,10 @@ _The last line fixes an OpenGL problem that students with an old account would o
 
 #### For all
 
-[Source ROS](https://wiki.ros.org/melodic/Installation/Ubuntu#melodic.2BAC8-Installation.2BAC8-DebEnvironment.Environment_setup):
+[Source ROS](https://wiki.ros.org/noetic/Installation/Ubuntu#noetic.2BAC8-Installation.2BAC8-DebEnvironment.Environment_setup):
 
 ```bash
-echo "source /opt/ros/melodic/setup.bash" >> ~/.bashrc
+echo "source /opt/ros/noetic/setup.bash" >> ~/.bashrc
 source ~/.bashrc
 ```
 
@@ -259,7 +259,7 @@ cd ~/catkin_ws/
 wstool init src
 cd ~/catkin_ws/src
 wstool set -y irob_assignment_1 --git https://github.com/danielduberg/irob_assignment_1.git -v master
-wstool set -y hector_slam --git https://github.com/tu-darmstadt-ros-pkg/hector_slam.git -v melodic-devel
+wstool set -y hector_slam --git https://github.com/tu-darmstadt-ros-pkg/hector_slam.git -v noetic-devel
 wstool update
 cd ~/catkin_ws
 # This makes sure we compile in release mode (which means that the compiler optimizes the code)
@@ -692,7 +692,7 @@ Do not worry about it. It is fine. It is because the SLAM system is trying to us
 If you get an error like this when starting the simulation:
 
 ```bash
-[gazebo-1] process has died [pid 6639, exit code 255, cmd /opt/ros/melodic/lib/gazebo_ros/gzserver -e ode /home/dduberg/catkin_ws/src/irob_assignment_1/worlds/office.world __name:=gazebo __log:=/home/dduberg/.ros/log/18af60ee-c01f-11e9-98f6-b06ebf6030aa/gazebo-1.log].
+[gazebo-1] process has died [pid 6639, exit code 255, cmd /opt/ros/noetic/lib/gazebo_ros/gzserver -e ode /home/dduberg/catkin_ws/src/irob_assignment_1/worlds/office.world __name:=gazebo __log:=/home/dduberg/.ros/log/18af60ee-c01f-11e9-98f6-b06ebf6030aa/gazebo-1.log].
 log file: /home/dduberg/.ros/log/18af60ee-c01f-11e9-98f6-b06ebf6030aa/gazebo-1*.log
 ```
 

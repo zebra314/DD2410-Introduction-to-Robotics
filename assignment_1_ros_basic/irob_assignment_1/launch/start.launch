@@ -31,4 +31,7 @@
     <remap from="base_scan" to="scan"/>
   </node>
 
+  <!-- Controller -->
+  <node name="controller" pkg="irob_assignment_1" type="controller.py" output="screen" />
+
 </launch>

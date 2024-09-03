@@ -1,11 +1,11 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 from sensor import Sensor
 from math import exp, fabs, atan2, fmod, pi, hypot
 import numpy as np
 from nav_msgs.msg import Path
 from geometry_msgs.msg import PoseStamped
 from tf.transformations import quaternion_from_euler
-from sets import Set
+#import sets
 
 
 def raytrace(start, end):
@@ -93,7 +93,8 @@ class RRTNode:
         self._children.append(new_child)
 
     def erase_child(self, child):
-        self._children.remove(child)
+        if len(self._children) > 0:
+            self._children.remove(child)
 
     def get_children(self):
         return self._children
@@ -173,8 +174,8 @@ class RRTNode:
         min_y = max(0, min(grid_map.info.height-1, min_y))
         max_y = max(0, min(grid_map.info.height-1, max_y))
 
-        unknown_space = Set()
-        max_gain = Set()
+        unknown_space = set()
+        max_gain = set()
 
         for y in [min_y, max_y]:
             for x in range(min_x, max_x, 50):
