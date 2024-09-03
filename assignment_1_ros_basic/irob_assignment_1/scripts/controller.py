@@ -35,8 +35,9 @@ def move(path):
     global control_client, robot_frame_id, pub
 
     while path.poses:
-        # Call service client with path
+        # Call service client with path to get setpoint and new path
         response = control_client(path)
+        path = response.new_path
 
         # Transform Setpoint from service client
         transform = tf_buffer.lookup_transform(
@@ -59,15 +60,16 @@ def move(path):
         cmd_vel.angular.z = 4 * atan2(transformed_point.point.y, transformed_point.point.x)
         cmd_vel.angular.z = min(cmd_vel.angular.z, max_angular_velocity)
 
+        # If angular velocity is too high, set linear velocity to 0
+        # prevents robot from moving forward while turning then stuck in the wall
+        if(cmd_vel.angular.z / max_angular_velocity) > 0.5:
+            cmd_vel.linear.x = 0
+
         # Publish Twist
         pub.publish(cmd_vel)
-
-        path = response.path
         rospy.sleep(0.1)
 
-        # Call service client again if the returned path is not empty and do stuff again
-
-        # Send 0 control Twist to stop robot
+    # Send 0 control Twist to stop robot
     cmd_vel.linear.x = 0
     cmd_vel.angular.z = 0
     pub.publish(cmd_vel)
@@ -110,7 +112,7 @@ if __name__ == "__main__":
     rospy.wait_for_service('get_setpoint')
     control_client = rospy.ServiceProxy('get_setpoint', GetSetpoint)
 
-    # TF
+    # Init tf2
     tf_buffer = tf2_ros.Buffer()
     listener = tf2_ros.TransformListener(tf_buffer)
 
