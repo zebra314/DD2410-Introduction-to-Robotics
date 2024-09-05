@@ -5,6 +5,8 @@
 ### Presentation questions
 
 why do you need a rospy.init_node(...)?
+The node is the basic unit of operation in ROS. By using the function, we
+tell the ROS master that the node is up and running.
 
 What does pub = rospy.Publisher(...) and pub.publish(...) do?
 
