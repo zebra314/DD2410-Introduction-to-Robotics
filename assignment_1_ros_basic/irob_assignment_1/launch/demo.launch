@@ -1,0 +1,12 @@
+<launch>
+
+  <!-- Simulator -->
+  <include file="$(find irob_assignment_1)/launch/simulator.launch" />
+
+  <!-- Start -->
+  <include file="$(find irob_assignment_1)/launch/start.launch" />
+
+  <!-- Controller -->
+  <node name="controller" pkg="irob_assignment_1" type="controller.py" output="screen" />
+
+</launch>
