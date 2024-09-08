@@ -31,5 +31,6 @@ assignment1:
 	$(MAKE) ASSIGNMENT_FOLDER=assignment_1_ros_basic all
 
 assignment2:
+	$(MAKE) ASSIGNMENT_FOLDER=assignment_2_inverse_kinematic all
 
 assignment3:
