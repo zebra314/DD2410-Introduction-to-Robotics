@@ -48,3 +48,26 @@ The rospy.sleep(...) function pauses the node for a time to ensure the rate is e
 A subscriber is a node that listens to a topic and receives messages from it. A service is a node that listens to a service request and sends a response. An action server is a node that listens to an action request and sends a response. The difference between a service and an action server is that an action server can send feedback messages to the client.
 
 ## Lab 2: Inverse Kinematics
+
+### Description
+
+In this assignment you will program the inverse kinematic (IK) algorithm for a robot, which will move its joints so that it follows a desired path with the end-effector. 
+
+It is composed of two parts:
+
+A 3 DOF SCARA robot, with an inverse kinematic solution that is possible in analytic form. Solving this part is the minimum requirement to pass the assignment, and get an E grade. Kattis will give you a score of 20 or above if this part is solved.
+
+A 7 DOF KUKA robot, with the inverse kinematic solution to be implemented with iterative algorithms. Solving this part is required for a C grade (the best grade possible for this assignment). Kattis will give you a score of 22 if both parts are solved.
+
+The python file:
+
+[kinematics_assignment/scripts/IK_functions.py](./assignment_2_inverse_kinematic/kinematics_assignment/scripts/IK_functions.py)
+
+### Refernces
+
+1. [Video - Computing the Robot Jacobian of Serial Manipulators | Robotic Systems (OLD)](https://www.youtube.com/watch?v=V1TXcU1r-ns)
+
+2. [Passage - The Ultimate Guide to Jacobian Matrices for Robotics](https://automaticaddison.com/the-ultimate-guide-to-jacobian-matrices-for-robotics/)
+
+3. [Passage - Overview of Jacobian IK](https://medium.com/unity3danimation/overview-of-jacobian-ik-a33939639ab2)
+
