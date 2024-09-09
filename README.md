@@ -42,3 +42,9 @@ The rospy.Rate(...) function is used to set the rate at which the loop runs. It 
 5. What is the purpose of the rospy.sleep() function?
 
 The rospy.sleep(...) function pauses the node for a time to ensure the rate is equal to which we set up by the rospy.Rate(...) function.
+
+6. What is the differnce between a subscriber, service and action server?
+
+A subscriber is a node that listens to a topic and receives messages from it. A service is a node that listens to a service request and sends a response. An action server is a node that listens to an action request and sends a response. The difference between a service and an action server is that an action server can send feedback messages to the client.
+
+## Lab 2: Inverse Kinematics
