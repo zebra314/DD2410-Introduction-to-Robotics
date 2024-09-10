@@ -37,7 +37,14 @@ def scara_IK(point):
 
     return q
 
-def transform_matrix(joint_positions):
+def get_dh_matrix(alpha, a, d, theta):
+    A = np.array([[np.cos(theta), -np.sin(theta)*np.cos(alpha), np.sin(theta)*np.sin(alpha), a*np.cos(theta)],
+                  [np.sin(theta), np.cos(theta)*np.cos(alpha), -np.cos(theta)*np.sin(alpha), a*np.sin(theta)],
+                  [0, np.sin(alpha), np.cos(alpha), d],
+                  [0, 0, 0, 1]])
+    return A
+
+def get_transform_matrices(joint_positions):
     # DH parameters
     L = 0.4
     M = 0.39
@@ -48,37 +55,40 @@ def transform_matrix(joint_positions):
              joint_positions[3], joint_positions[4], joint_positions[5], 
              joint_positions[6]]
 
-    # Transformation matrices
-    T_0_i = []
-    for i in range(7):
-        A = np.array([[np.cos(theta[i]), -np.sin(theta[i])*np.cos(alpha[i]), np.sin(theta[i])*np.sin(alpha[i]), a[i]*np.cos(theta[i])],
-                    [np.sin(theta[i]), np.cos(theta[i])*np.cos(alpha[i]), -np.cos(theta[i])*np.sin(alpha[i]), a[i]*np.sin(theta[i])],
-                    [0, np.sin(alpha[i]), np.cos(alpha[i]), d[i]],
-                    [0, 0, 0, 1]])
-        
-        if(i == 0):
-            T_0_i.append(A)
-        else:
-            T_0_i.append(T_0_i[i-1] @ A)
-    
-    return T_0_i
+    # Base frame
+    T0 = np.eye(4)
+    T0[2, 3] = 0.311 # z-axis offset
 
-def jacobian(joint_positions, transform_matrix):
-    T_0_i = transform_matrix
+    # End-effector frame
+    T7 = np.eye(4)
+    T7[2, 3] = 0.078 # z-axis offset
+
+    # Transformation matrices from base to i-th joint
+    T = []
+    T.append(T0)
+    for i in range(7):
+        A = get_dh_matrix(alpha[i], a[i], d[i], theta[i])
+        T.append(T[i] @ A)
+    T.append(T[7] @ T7)
+    
+    return T
+
+def jacobian(joint_positions, transform_matrices):
+    T = transform_matrices
     
     # Jacobian
     J_v = []
     J_w = []
-    Z = [np.array([0, 0, 1])]
-    t = [np.array([0, 0, 0])]
+    z = [np.array([0, 0, 1])]
+    p = [np.array([0, 0, 0])]
 
     for i in range(7):
-        Z.append(T_0_i[i][0:3, 2])
-        t.append(T_0_i[i][0:3, 3])
-    
+        z.append(T[i][0:3, 2])
+        p.append(T[i][0:3, 3])
+
     for i in range(7):
-        J_v.append(np.cross(Z[i], (t[6] - t[i])))
-        J_w.append(Z[i])
+        J_v.append(np.cross(z[i], (p[6] - p[i])))
+        J_w.append(z[i])
 
     J = np.vstack((np.array(J_v).T, np.array(J_w).T))
     return J
@@ -103,16 +113,16 @@ def kuka_IK(point, R, joint_positions):
 
     # Inverse Kinematics Loop
     while pos_error_norm > tol and iter_count < max_iter:
-        T_0_i = transform_matrix(q)
-        J = jacobian(q, T_0_i)
+        T = get_transform_matrices(q)
+        J = jacobian(q, T)
 
-        pos_current = T_0_i[6][0:3, 3]
+        pos_current = T[-1][0:3, 3]
         pos_final = np.array([x, y, z])
 
         pos_error = pos_final - pos_current
         pos_error_norm = np.linalg.norm(pos_error)
 
-        R_error = R @ T_0_i[6][0:3, 0:3].T
+        R_error = R @ T[-1][0:3, 0:3].T
         rot_error = 0.5 * np.array([R_error[2, 1] - R_error[1, 2], 
                                     R_error[0, 2] - R_error[2, 0], 
                                     R_error[1, 0] - R_error[0, 1]])   
