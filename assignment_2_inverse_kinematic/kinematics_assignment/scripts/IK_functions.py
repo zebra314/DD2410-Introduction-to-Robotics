@@ -62,7 +62,7 @@ def get_transform_matrices(joint_positions):
         A = np.array([[np.cos(theta[i]), -np.sin(theta[i])*np.cos(alpha[i]), np.sin(theta[i])*np.sin(alpha[i]), a[i]*np.cos(theta[i])],
                       [np.sin(theta[i]), np.cos(theta[i])*np.cos(alpha[i]), -np.cos(theta[i])*np.sin(alpha[i]), a[i]*np.sin(theta[i])],
                       [0, np.sin(alpha[i]), np.cos(alpha[i]), d[i]],
-                      [0, 0, 0, 1]])
+                      [0, 0, 0, 1]])    
         T.append(T[i] @ A)
 
     T.append(T[-1] @ T_end)
@@ -86,20 +86,23 @@ def get_jacobian(joint_positions, transform_matrices):
     return J
 
 def kuka_IK(point, R, joint_positions):
-    point = np.array(point)
-    R = np.array(R)
-    joint_positions = np.array(joint_positions)
     """
     point = (x, y, z), the desired position of the end-effector.
     R = 3x3 rotation matrix, the desired orientation of the end-effector.
     joint_positions = (q1, q2, q3, q4, q5, q6, q7) the current joint positions.
     """
 
+    # Convert the inputs to numpy arrays
+    point = np.array(point)
+    R = np.array(R)
+    joint_positions = np.array(joint_positions)
+
     # Loop parameters
-    tol = 1e-3
-    max_iter = 1000             
+    tol = 1e-2
+    max_iter = 100            
     iter_count = 0
 
+    # Target
     pos_target = np.array(point)
     rot_target = np.array(R)
 
@@ -108,9 +111,11 @@ def kuka_IK(point, R, joint_positions):
         T = get_transform_matrices(joint_positions)
         J = get_jacobian(joint_positions, T)
 
+        # Current
         pos_current = np.array(T[-1][0:3, 3])
         rot_current = np.array(T[-1][0:3, 0:3])
 
+        # Error
         pos_error = pos_current - pos_target
         rot_error = 0.5 * np.array([rot_current[2, 1] - rot_target[1, 2],
                                     rot_current[0, 2] - rot_target[2, 0],
@@ -121,8 +126,8 @@ def kuka_IK(point, R, joint_positions):
         rot_error_norm = np.linalg.norm(rot_error)
 
         # Check if the error is within the tolerance
-        if pos_error_norm < tol and rot_error_norm < tol:
-            break
+        # if pos_error_norm < tol and rot_error_norm < tol:
+        #     break        
 
         # Inverse Jacobian
         J_inv = np.linalg.pinv(J)
