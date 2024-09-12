@@ -20,6 +20,14 @@ while True:
     sleep() 
 ```
 
+### Usage
+
+```bash
+make assignment_1
+. ./devel/setup.zsh
+roslaunch irob_assignment_1 demo.launch
+```
+
 ### Presentation questions (prepared)
 
 1. why do you need a rospy.init_node(...)?
@@ -63,6 +71,14 @@ The python file:
 
 [kinematics_assignment/scripts/IK_functions.py](./assignment_2_inverse_kinematic/kinematics_assignment/scripts/IK_functions.py)
 
+### Usage
+
+```bash
+make assignment_2
+. ./devel/setup.zsh
+roslaunch kinematics_assignment kuka.launch # or scara.launch
+```
+
 ### Refernces
 
 1. [Video - Computing the Robot Jacobian of Serial Manipulators | Robotic Systems (OLD)](https://www.youtube.com/watch?v=V1TXcU1r-ns)
@@ -70,4 +86,6 @@ The python file:
 2. [Passage - The Ultimate Guide to Jacobian Matrices for Robotics](https://automaticaddison.com/the-ultimate-guide-to-jacobian-matrices-for-robotics/)
 
 3. [Passage - Overview of Jacobian IK](https://medium.com/unity3danimation/overview-of-jacobian-ik-a33939639ab2)
+
+4. [Book - Robotics Modelling, Planning and Control](https://link.springer.com/book/10.1007/978-1-84628-642-1) CH3: Differential Kinematics and Statics
 

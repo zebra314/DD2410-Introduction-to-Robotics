@@ -38,7 +38,11 @@ def scara_IK(point):
     return q
 
 def get_transform_matrices(joint_positions):
-    # DH parameters
+    """
+    @param joint_positions: 1xi vector, the current joint positions.
+    @return T: list of 4x4 transformation matrices from base to i-th joint.
+    """
+    # Predefined DH parameters
     L = 0.4
     M = 0.39
     alpha = [np.pi/2, -np.pi/2, -np.pi/2, np.pi/2, np.pi/2, -np.pi/2, 0]
@@ -69,6 +73,11 @@ def get_transform_matrices(joint_positions):
     return T
 
 def get_jacobian(joint_positions, transform_matrices):
+    """
+    @param joint_positions: 1xi vector, the current joint positions.
+    @param transform_matrices: list of 4x4 transformation matrices from base to i-th joint.
+    @return J: 6xi matrix, the Jacobian matrix.
+    """
     J_v = []
     J_w = []
     z = []
@@ -85,6 +94,31 @@ def get_jacobian(joint_positions, transform_matrices):
     J = np.vstack((np.array(J_v).T, np.array(J_w).T))
     return J
 
+def get_rot_error(rot_current, rot_target):
+    """
+    @param rot_current: 3x3 rotation matrix, the current orientation of the end-effector.
+    @param rot_target: 3x3 rotation matrix, the desired orientation of the end-effector.
+    @return rot_error: 3x1 vector, the rotation error.
+    """
+    R_error = np.dot(rot_target, rot_current.T)
+    trace_R = np.trace(R_error)  # Sum of the diagonal elements
+    trace_R = np.clip(trace_R, -1.0, 1.0)  # Avoid error in arccos   
+    theta = np.arccos((trace_R - 1) / 2)
+
+    if theta > np.pi / 2:
+        theta = np.pi - theta
+
+    if np.sin(theta) > 1e-6:  # Avoid division by zero
+        r = np.array([(R_error[2, 1] - R_error[1, 2]),
+                      (R_error[0, 2] - R_error[2, 0]),
+                      (R_error[1, 0] - R_error[0, 1])]) / (2 * np.sin(theta))
+        r = r / np.linalg.norm(r)
+    else:
+        r = np.array([0, 0, 0])
+
+    rot_error = r * np.sin(theta)
+    return rot_error
+
 def kuka_IK(point, R, joint_positions):
     """
     point = (x, y, z), the desired position of the end-effector.
@@ -99,7 +133,7 @@ def kuka_IK(point, R, joint_positions):
 
     # Loop parameters
     tol = 1e-2
-    max_iter = 100            
+    max_iter = 15
     iter_count = 0
 
     # Target
@@ -117,9 +151,7 @@ def kuka_IK(point, R, joint_positions):
 
         # Error
         pos_error = pos_current - pos_target
-        rot_error = 0.5 * np.array([rot_current[2, 1] - rot_target[1, 2],
-                                    rot_current[0, 2] - rot_target[2, 0],
-                                    rot_current[1, 0] - rot_target[0, 1]])
+        rot_error = get_rot_error(rot_current, rot_target)
 
         # Get the norm of the error
         pos_error_norm = np.linalg.norm(pos_error)
@@ -127,7 +159,7 @@ def kuka_IK(point, R, joint_positions):
 
         # Check if the error is within the tolerance
         # if pos_error_norm < tol and rot_error_norm < tol:
-        #     break        
+        #     break     
 
         # Inverse Jacobian
         J_inv = np.linalg.pinv(J)
