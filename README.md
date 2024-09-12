@@ -1,5 +1,10 @@
 # Introduction to Robotics (DD2410)
 
+## Catalog
+
+1. [Lab 1: Introduction to ROS](#lab-1-introduction-to-ros)
+2. [Lab 2: Inverse Kinematics](#lab-2-inverse-kinematics)
+
 ## Lab 1: Introduction to ROS
 
 ### Description
