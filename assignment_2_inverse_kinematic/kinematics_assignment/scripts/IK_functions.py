@@ -151,7 +151,10 @@ def kuka_IK(point, R, joint_positions):
 
         # Error
         pos_error = pos_current - pos_target
-        rot_error = get_rot_error(rot_current, rot_target)
+        # rot_error = get_rot_error(rot_current, rot_target)
+        rot_error = 1/2 * (   np.cross(R[:, 0], rot_current[:, 0])
+                            + np.cross(R[:, 1], rot_current[:, 1])
+                            + np.cross(R[:, 2], rot_current[:, 2]))
 
         # Get the norm of the error
         pos_error_norm = np.linalg.norm(pos_error)
