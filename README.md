@@ -94,3 +94,12 @@ roslaunch kinematics_assignment kuka.launch # or scara.launch
 
 4. [Book - Robotics Modelling, Planning and Control](https://link.springer.com/book/10.1007/978-1-84628-642-1) CH3: Differential Kinematics and Statics
 
+## Lab 3: Path Planning
+
+### References
+
+1. [Video - A* Pathfinding (E01: algorithm explanation)](https://www.youtube.com/watch?v=-L-WgKMFuhE&t=285s)
+
+2. [Github - PythonRobotics/PathPlanning/AStar/a_star.py](https://github.com/AtsushiSakai/PythonRobotics/blob/master/PathPlanning/AStar/a_star.py)
+
+3. [Instruction - Dubin's Car](./assignment_3_planning/README.md)
