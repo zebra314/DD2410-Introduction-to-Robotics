@@ -6,7 +6,7 @@
 
 from dubins import *
 import numpy as np
-from time import sleep
+import heapq
 
 # Constants
 car_resolution = 0.09 # rad, about 5 degrees
@@ -18,20 +18,32 @@ def solution(car):
   time_lst = [0.0]
 
   astar = AStar(car, car_resolution)
-
   path = astar.evaluate_node()
 
   if path is None:
     print("No path found")
-    return
+    x, y = car.x0, car.y0
+    xl, yl, thetal, phil, tl = [x], [y], [0.0], [], [0.0]
+    phi = 0.1
+    for _ in range(2000):
+      xn, yn, thetan = step(car, xl[-1], yl[-1], thetal[-1], phi, dt=0.1)
+      xl.append(xn)
+      yl.append(yn)
+      thetal.append(thetan)
+      phil.append(phi)
+      tl.append(tl[-1] + 0.1)
+    return phil, tl
 
-  # Path to phi
+  # Drive the car along the path
+  theta = 0.0
+  phi_lst = []
   for i in range(len(path) - 1):
-    node1 = path[i]
-    node2 = path[i + 1]
-    phi = 0
+    x_curr, y_curr = path[i].x, path[i].y
+    x_nxt, y_nxt = path[i + 1].x, path[i + 1].y
+    phi = np.arctan2(y_nxt - y_curr, x_nxt - x_curr) - theta
+    phi = np.clip(phi, -np.pi/4, np.pi/4)
+    _, _, theta = step(car, x_curr, y_curr, theta, phi, dt=0.1)
     phi_lst.append(phi)
-    theta_lst.append(phi)
 
   for i in range(len(phi_lst)):
     time_lst.append(time_lst[-1] + dt)
@@ -52,40 +64,40 @@ class AStar:
     self.obs = car.obs
 
     # The set of nodes to be evaluated
-    self.open_set = self.NumpyPriorityQueue()
+    self.open_set = self.PriorityQueue()
 
     # The set of nodes already evaluated
     self.closed_set = set()
 
     # Init nodes
     self.target_nd = self.Node(car.xt, car.yt, None, 0, 0)
-    init_nd = self.Node(car.x0, car.y0, None, 0, self.get_dist(car.x0, car.y0, car.xt, car.yt))
-    self.open_set.push(init_nd)
+    self.current_nd = self.Node(car.x0, car.y0, None, 0, self.get_dist(car.x0, car.y0, car.xt, car.yt))
+    self.open_set.push(self.current_nd)
   
   def evaluate_node(self):
     while self.open_set.empty() == False:
-
       self.current_nd = self.open_set.pop()
-      # print(f"Current node: {self.current_nd.x}, {self.current_nd.y}")
       self.closed_set.add(self.current_nd)
 
+      # print("Current: {:.2f}, {:.2f}".format(self.current_nd.x, self.current_nd.y))
+      
       # Reached the target
       if self.current_nd == self.target_nd:
-        print("Reached the target ({}, {})".format(self.target_nd.x, self.target_nd.y))
-        print("Current node: ({}, {})".format(self.current_nd.x, self.current_nd.y))
-        path = self.get_path()
+        print("Reached the target")
+        # print("Target: {:.2f}, {:.2f}".format(self.target_nd.x, self.target_nd.y))
+        # print("Current: {:.2f}, {:.2f}".format(self.current_nd.x, self.current_nd.y))
+        path = self.get_track_path()
         return path
-      
+
       neighbors = self.get_neighbors(self.current_nd)
       for neighbor in neighbors:
         if neighbor in self.closed_set:
           continue
-        if neighbor not in self.closed_set or neighbor.g < node.g:
+        if neighbor not in self.open_set or neighbor.g < self.current_nd.g:
           neighbor.parent = self.current_nd
-          self.closed_set.add(neighbor)
           self.open_set.push(neighbor)
 
-  def get_path(self):
+  def get_track_path(self):
     path = []
     node = self.current_nd
     while node.parent != None:
@@ -94,7 +106,6 @@ class AStar:
     path.append(node)
     path.reverse()
     return path
-
 
   def get_dist(self, *args):
     if len(args) == 2 and all(isinstance(arg, Node) for arg in args):
@@ -153,23 +164,25 @@ class AStar:
     def __hash__(self):
       return hash((self.x, self.y))
     
-  class NumpyPriorityQueue:
+    def __lt__(self, other):
+      return self.f < other.f
+
+  class PriorityQueue:
     def __init__(self):
-      self.queue = np.array([], dtype=float).reshape(0, 2)
+      self.queue = []
+      self.set = set()
 
     def push(self, node):
-      # Add a new element and sort the array based on priority
-      new_element = np.array([[node.f, node]])
-      self.queue = np.vstack((self.queue, new_element))
-      self.queue = self.queue[self.queue[:, 0].argsort()]  # Sort by the first column (priority)
+      heapq.heappush(self.queue, node)
+      self.set.add(node)
 
     def pop(self):
-      # Remove and return the element with the highest priority (lowest value)
-      if self.queue.size == 0:
-        return None
-      element = self.queue[0, :]
-      self.queue = np.delete(self.queue, 0, axis=0)
-      return element[1]
-    
+      node = heapq.heappop(self.queue)
+      self.set.remove(node)
+      return node
+
+    def __contains__(self, node):
+      return node in self.set
+
     def empty(self):
-      return self.queue.size == 0
+      return len(self.queue) == 0
