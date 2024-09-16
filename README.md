@@ -96,6 +96,27 @@ roslaunch kinematics_assignment kuka.launch # or scara.launch
 
 ## Lab 3: Path Planning
 
+### A star algorithm
+
+Implement A* algorithm.
+
+```python
+:weight: g() + h()
+  - g(): the distance which have walked
+  - h(): straight line distance between that node and end node
+  
+  - End the loop when the queue is empty or the end node is found.
+  - In the loop:
+    - Get the node with the smallest distance from the queue.
+    - If the node is the end node, end the loop.
+    - Get the neighbors of the node.
+    - For each neighbor, Calculate the weight from the start node to the neighbor.
+    - If the neighbor is not visited or the weight is smaller than the previous one,
+    - Add the neighbor to the visited set.
+    - Record the parent node and the distance in the parent dictionary.
+    - Add the neighbor to the queue.
+```
+
 ### References
 
 1. [Video - A* Pathfinding (E01: algorithm explanation)](https://www.youtube.com/watch?v=-L-WgKMFuhE&t=285s)
