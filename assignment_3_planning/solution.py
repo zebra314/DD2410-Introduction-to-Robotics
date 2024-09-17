@@ -7,21 +7,18 @@
 from dubins import *
 import numpy as np
 import heapq
-
-# Constants
-car_resolution = 0.09 # rad, about 5 degrees
-dt = 0.05
+from copy import copy
 
 def solution(car):
   theta_lst = [0.0]  # Heading angle
   phi_lst = []       # Steering angle, -pi/4 <= phi <= pi/4
   time_lst = [0.0]
 
-  astar = AStar(car, car_resolution)
+  astar = AStar(car)
   path = astar.evaluate_node()
 
   if path is None:
-    print("No path found")
+    # print("No path found")
     x, y = car.x0, car.y0
     xl, yl, thetal, phil, tl = [x], [y], [0.0], [], [0.0]
     phi = 0.1
@@ -51,18 +48,12 @@ def solution(car):
   return phi_lst, time_lst
 
 class AStar:
-  def __init__(self, car, car_resolution):
-    # Init map
-    self.car_resolution = car_resolution
-    self.x_min = car.xlb
-    self.x_max = car.xub
-    self.y_min = car.ylb
-    self.y_max = car.yub
-
-    # List of obstacles
-    # [[x1, y1, r1], [x2, y2, r2], ...]
-    self.obs = car.obs
-
+  def __init__(self, car):
+    # Init navigation settings
+    self.car = car
+    self.time_resolution = 0.01
+    self.target_threshold = 0.01
+  
     # The set of nodes to be evaluated
     self.open_set = self.PriorityQueue()
 
@@ -70,26 +61,25 @@ class AStar:
     self.closed_set = set()
 
     # Init nodes
-    self.target_nd = self.Node(car.xt, car.yt, None, 0, 0)
-    self.current_nd = self.Node(car.x0, car.y0, None, 0, self.get_dist(car.x0, car.y0, car.xt, car.yt))
+    self.current_nd = self.Node(car.x0, car.y0, 0, None, 0, self.get_dist(car.x0, car.y0, car.xt, car.yt), [], [0.0])
     self.open_set.push(self.current_nd)
   
   def evaluate_node(self):
     while self.open_set.empty() == False:
       self.current_nd = self.open_set.pop()
       self.closed_set.add(self.current_nd)
-
-      # print("Current: {:.2f}, {:.2f}".format(self.current_nd.x, self.current_nd.y))
       
       # Reached the target
-      if self.current_nd == self.target_nd:
+      if self.get_dist(self.current_nd.x, self.current_nd.y, self.car.xt, self.car.yt) < self.target_threshold:
         print("Reached the target")
-        # print("Target: {:.2f}, {:.2f}".format(self.target_nd.x, self.target_nd.y))
-        # print("Current: {:.2f}, {:.2f}".format(self.current_nd.x, self.current_nd.y))
         path = self.get_track_path()
         return path
 
       neighbors = self.get_neighbors(self.current_nd)
+
+      if len(neighbors) == 0:
+        continue
+
       for neighbor in neighbors:
         if neighbor in self.closed_set:
           continue
@@ -107,62 +97,110 @@ class AStar:
     path.reverse()
     return path
 
-  def get_dist(self, *args):
-    if len(args) == 2 and all(isinstance(arg, Node) for arg in args):
-      node1, node2 = args
-      x1, y1 = node1.x, node1.y
-      x2, y2 = node2.x, node2.y
-    elif len(args) == 4 and all(isinstance(arg, (int, float)) for arg in args):
-      x1, y1, x2, y2 = args
-    else:
-      raise ValueError("Invalid arguments. Pass either two Node objects or four numbers.")
-
+  def get_dist(self, x1, y1, x2, y2):
     return ((x2 - x1) ** 2 + (y2 - y1) ** 2) ** 0.5
 
   def get_neighbors(self, node):
+    """
+    @input:
+      node: current node
+    
+    @return:
+      neighbors: list of nodes that are reachable from the
+                  current node with a steering angle of -pi/4, 0, pi/4
+    """
     neighbors = []
-    for rad in np.linspace(-np.pi/4, np.pi/4, num=int((np.pi/2)/self.car_resolution) + 1):
-      rad = round(rad, 3)
-      new_x = node.x + np.cos(rad) * self.car_resolution
-      new_y = node.y + np.sin(rad) * self.car_resolution
-
-      if self.check_collision(new_x, new_y) == False:
-        new_node = self.Node(new_x, new_y, node, 
-                        node.g + self.get_dist(node.x, node.y, new_x, new_y), 
-                        self.get_dist(new_x, new_y, self.target_nd.x, self.target_nd.y))
+    for phi in [-0.78, -0.68, -0.59, -0.49, -0.39, -0.29, -0.20, -0.10, 0, 0.10, 0.20, 0.29, 0.39, 0.49, 0.59, 0.68, 0.78]:
+    # for phi in [-0.78, -0.59, -0.39, -0.20, 0, 0.20, 0.39, 0.59, 0.78]:
+    # for phi in [-0.78, -0.50, -0.20, 0, 0.20, 0.50, 0.78]:
+    # for phi in [-0.78, -0.39, 0, 0.39, 0.78]:
+      x_nxt, y_nxt, theta_nxt, control_lst, time_lst = self.get_nxt_state(
+        node.x, node.y, node.theta, phi, copy(node.control_lst), copy(node.time_lst)
+      )
+      if x_nxt is not None:
+        new_node_g = node.g + self.get_dist(node.x, node.y, x_nxt, y_nxt)
+        new_node_h = self.get_dist(x_nxt, y_nxt, self.car.xt, self.car.yt)
+        new_node = self.Node(
+          x_nxt,
+          y_nxt, 
+          theta_nxt,
+          node,
+          new_node_g,
+          new_node_h,
+          control_lst,
+          time_lst
+        )        
         neighbors.append(new_node)
     return neighbors
 
-  def check_collision(self, x, y):
-    if x < self.x_min or x > self.x_max or \
-       y < self.y_min or y > self.y_max:
+  def get_nxt_state(self, x, y, theta, phi, control_lst, time_lst):
+    """
+    @input:
+      x, y, theta: current position and heading angle
+      phi: steering angle
+      control_lst: list of steering angles
+      time_lst: list of simulation time
+    
+    @return:
+      x, y, theta: next position and heading angle
+      control_lst: updated list of steering angles
+      time_lst: updated list of simulation time
+    """
+
+    # If the car is turning, increase the simulation time
+    for sim_time in range(4 if phi != 0 else 2):
+      x, y, theta = step(self.car, x, y, theta, phi)
+      control_lst.append(phi)
+      time_lst.append(time_lst[-1] + self.time_resolution)
+
+      while theta > np.pi:
+        theta -= 2 * np.pi
+      while theta < -np.pi:
+        theta += 2 * np.pi
+
+    if not self.check_reachable(x, y):
+      return None, None, None, None, None
+    return x, y, theta, control_lst, time_lst
+
+  def check_reachable(self, x, y):
+    # Check collision
+    for obs in self.car.obs:
+      if self.get_dist(x, y, obs[0], obs[1]) <= obs[2]:
+        return False
+
+    # Check boundary
+    if self.car.xlb < x < self.car.xub and self.car.ylb < y < self.car.yub:
       return True
-    for obs in self.obs:
-      if self.get_dist(x, y, obs[0], obs[1]) < obs[2]:
-        return True
-    return False
+    else:
+      return False
 
   class Node:
-    def __init__(self, x, y, parent, g, h):
+    def __init__(self, x, y, theta, parent, g, h, control_lst, time_lst):
       # Pos
-      self.x = round(x, 1)
-      self.y = round(y, 1)
+      # self.x = round(x * 10, 2) / 10
+      # self.y = round(y * 10, 2) / 10
+      self.x = round(x , 3)
+      self.y = round(y , 3)
+      self.theta = round(theta, 3)
 
       # Parent node
       self.parent = parent
 
       # Cost
-      self.g = round(g, 1)
-      self.h = round(h, 1)
-      self.f = round((g + h), 1)
+      self.g = g
+      self.h = h
+      self.f = (g + h)
+
+      self.control_lst = control_lst
+      self.time_lst = time_lst
     
     def __eq__(self, other):
       if other is None or not isinstance(other, AStar.Node):
         return False
-      return (self.x, self.y) == (other.x, other.y)
+      return (self.x, self.y, self.theta) == (other.x, other.y, other.theta)
 
     def __hash__(self):
-      return hash((self.x, self.y))
+      return hash((self.x, self.y, self.theta))
     
     def __lt__(self, other):
       return self.f < other.f
