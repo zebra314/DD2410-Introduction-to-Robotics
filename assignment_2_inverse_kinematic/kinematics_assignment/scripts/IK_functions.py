@@ -133,7 +133,7 @@ def kuka_IK(point, R, joint_positions):
 
     # Loop parameters
     tol = 1e-2
-    max_iter = 15
+    max_iter = 5
     iter_count = 0
 
     # Target
