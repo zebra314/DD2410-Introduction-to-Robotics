@@ -4,153 +4,103 @@
 # {student id}
 # yplin@kth.se
 
+PLOT_ENABLED = True
+
 from dubins import *
 import numpy as np
-import heapq
 from copy import copy
-from time import sleep
-import matplotlib.pyplot as plt
-import random
+
+if PLOT_ENABLED == True:
+  import matplotlib.pyplot as plt
 
 def solution(car):
-  theta_lst = [0.0]  # Heading angle
-  phi_lst = []       # Steering angle, -pi/4 <= phi <= pi/4
-  time_lst = [0.0]
-
   astar = AStar(car)
-  path = astar.evaluate_node()
+  control_lst, time_lst = astar.evaluate_node()
 
-  if path is None:
-    # print("No path found")
-    x, y = car.x0, car.y0
-    xl, yl, thetal, phil, tl = [x], [y], [0.0], [], [0.0]
-    phi = 0.1
-    for _ in range(2000):
-      xn, yn, thetan = step(car, xl[-1], yl[-1], thetal[-1], phi, dt=0.1)
-      xl.append(xn)
-      yl.append(yn)
-      thetal.append(thetan)
-      phil.append(phi)
-      tl.append(tl[-1] + 0.1)
-    return phil, tl
-
-  # Drive the car along the path
-  theta = 0.0
-  phi_lst = []
-  for i in range(len(path) - 1):
-    x_curr, y_curr = path[i].x, path[i].y
-    x_nxt, y_nxt = path[i + 1].x, path[i + 1].y
-    phi = np.arctan2(y_nxt - y_curr, x_nxt - x_curr) - theta
-    phi = np.clip(phi, -np.pi/4, np.pi/4)
-    _, _, theta = step(car, x_curr, y_curr, theta, phi, dt=0.1)
-    phi_lst.append(phi)
-
-  for i in range(len(phi_lst)):
-    time_lst.append(time_lst[-1] + dt)
-
-  return phi_lst, time_lst
+  return control_lst, time_lst
 
 class AStar:
   def __init__(self, car):
-    # Init navigation settings
     self.car = car
-    self.time_resolution = 0.01
-    self.target_threshold = 0.2
+    self.sim_times = 45
+    self.time_unit = 0.01
+    self.target_threshold = 1.0
   
-    # The set of nodes to be evaluated
-    self.open_set = self.PriorityQueue()
-
-    # The set of nodes already evaluated
-    self.closed_set = set()
-
-    # Init nodes
-    self.current_nd = self.Node(car.x0, car.y0, 0, None, 0, self.get_dist(car.x0, car.y0, car.xt, car.yt), [], [0.0])
-    self.open_set.push(self.current_nd)
-
-    # State
-    self.stock = False
+    self.open_set = dict() # nodes to be evaluated
+    self.closed_set = dict() # nodes already evaluated
 
   def evaluate_node(self):
-    # Initialize the plot
-    plt.ion()
-    fig, ax = plt.subplots()
-    ax.set_xlim([self.car.xlb, self.car.xub])
-    ax.set_ylim([self.car.ylb, self.car.yub])
-    
-    # Plot target
-    ax.plot(self.car.xt, self.car.yt, 'bo')
+    self.plot_init()
 
-    # Plot obstacles
-    for obs in self.car.obs:
-        obstacle = plt.Circle((obs[0], obs[1]), obs[2], color='blue', label='Obstacle')
-        plt.gca().add_artist(obstacle)
-    
-    while not self.open_set.empty():
-        self.current_nd = self.open_set.pop()
-        self.closed_set.add(self.current_nd)
-        
-        # Reached the target
-        if self.get_dist(self.current_nd.x, self.current_nd.y, self.car.xt, self.car.yt) < self.target_threshold:
-            print("Reached the target")
-            path = None #self.get_track_path()
-            plt.pause(1)
-            plt.close('all')
-            return path
+    current_nd = self.Node(self.car.x0, self.car.y0, 0)
+    current_nd.g = 0
+    current_nd.h = self.get_dist(self.car.x0, self.car.y0, self.car.xt, self.car.yt)
+    current_nd.f = current_nd.g + 2 * current_nd.h
+    self.open_set[current_nd.idx] = current_nd
 
-        # Plot current node
-        ax.plot(self.current_nd.x, self.current_nd.y, 'ro')
-        plt.pause(0.01)
+    while not len(self.open_set) == 0:
+      current_idx = min(self.open_set, key=lambda x: self.open_set[x].f)
+      current_nd = self.open_set[current_idx]
+      del self.open_set[current_idx]
+      self.closed_set[current_idx] = current_nd
 
-        neighbors = self.get_neighbors(self.current_nd)
+      # Reached the target
+      if self.get_dist(current_nd.x, current_nd.y, self.car.xt, self.car.yt) < self.target_threshold:
+        control_lst, time_lst = self.get_track_path(current_nd)
+        self.plot_close()
+        return control_lst, time_lst
 
-        if len(neighbors) <= 2:
-          self.stock = True
-          if len(neighbors) == 0:
-            continue
-        else:
-          self.stock = False
-        
-        for neighbor in neighbors:
-            if neighbor in self.closed_set:
-                continue
-            if neighbor not in self.open_set or neighbor.g < self.current_nd.g:
-                neighbor.parent = self.current_nd
-                self.open_set.push(neighbor)
+      self.plot_point(current_nd.x, current_nd.y)
 
-  def get_track_path(self):
-    path = []
-    node = self.current_nd
+      neighbors = self.get_neighbors(current_nd)
+      if len(neighbors) == 0:
+        continue
+      
+      for neighbor in neighbors:
+        if neighbor.idx in self.closed_set:
+          continue
+        elif neighbor.idx in self.open_set and neighbor.f < self.open_set[neighbor.idx].f:
+          self.open_set[neighbor.idx] = neighbor
+        elif neighbor.idx not in self.open_set or neighbor.g < current_nd.g:
+          self.open_set[neighbor.idx] = neighbor
+
+  def get_track_path(self, node):
+    control_lst, time_lst = [], []
     while node.parent != None:
-      path.append(node)
+      time_lst.insert(0, node.time * self.time_unit)
+      control_lst.insert(0, node.phi)
+
+      if PLOT_ENABLED == True:
+        self.ax.plot(node.x, node.y, 'go')
+
       node = node.parent
-    path.append(node)
-    path.reverse()
-    return path
+    time_lst.insert(0, 0)
+    return control_lst, time_lst
+  
+  def plot_init(self):
+    if PLOT_ENABLED == True:
+      plt.ion()
+      self.fig, self.ax = plt.subplots()
+      self.ax.set_xlim([self.car.xlb, self.car.xub])
+      self.ax.set_ylim([self.car.ylb, self.car.yub])
+      self.ax.plot(self.car.xt, self.car.yt, 'bo')
+      for obs in self.car.obs:
+          obstacle = plt.Circle((obs[0], obs[1]), obs[2], color='blue', label='Obstacle')
+          plt.gca().add_artist(obstacle)
+  
+  def plot_close(self):
+    if PLOT_ENABLED == True:
+      plt.pause(1)
+      plt.close('all')
+  
+  def plot_point(self, x, y):
+    if PLOT_ENABLED == True:
+      self.ax.plot(x, y, 'ro')
+      plt.pause(0.001)
 
   def get_dist(self, x1, y1, x2, y2):
     return ((x2 - x1) ** 2 + (y2 - y1) ** 2) ** 0.5
-
-  def heuristic(self, x, y, goal_x, goal_y, theta):
-    dist_penalty = 0
-    direction_penalty = 0
-    obstacle_penalty = 0
-    random_penalty = 0
-
-    if not self.stock:
-      dist_penalty = self.get_dist(x, y, goal_x, goal_y) * 1.5      
-      goal_direction = np.arctan2(goal_y - y, goal_x - x)
-      direction_diff = abs(theta - goal_direction)
-      direction_penalty = min(direction_diff, 2 * np.pi - direction_diff)
-    else:
-      random_penalty = np.random.rand() * 5
-
-    for obs in self.car.obs:
-      dist_to_obs = self.get_dist(x, y, obs[0], obs[1])
-      if dist_to_obs < obs[2] + 0.4:
-        obstacle_penalty += 0.3 / dist_to_obs
-    
-    return dist_penalty + direction_penalty + obstacle_penalty + random_penalty
-
+   
   def get_neighbors(self, node):
     """
     @input:
@@ -162,123 +112,85 @@ class AStar:
     """
     neighbors = []
 
-    if self.stock:
-      phi_lst = [-0.78, -0.39, 0, 0.39, 0.78]
-    else:
-      phi_lst = [-0.78, -0.50, -0.20, 0, 0.20, 0.50, 0.78]
-      # phi_lst = [-0.78, -0.68, -0.59, -0.49, -0.39, -0.29, -0.20, -0.10, 0, 0.10, 0.20, 0.29, 0.39, 0.49, 0.59, 0.68, 0.78]:
-      # phi_lst = [-0.78, -0.59, -0.39, -0.20, 0, 0.20, 0.39, 0.59, 0.78]:
-      # phi_lst = [-0.78, -0.50, -0.20, 0, 0.20, 0.50, 0.78]:
-      # phi_lst = [-0.78, -0.39, 0, 0.39, 0.78]:
+    # phi_lst = [-0.78, -0.39, 0, 0.39, 0.78]
+    phi_lst = [-0.78, 0, 0.78]
 
     for phi in phi_lst:
-      x_nxt, y_nxt, theta_nxt, control_lst, time_lst = self.get_nxt_state(
-        node.x, node.y, node.theta, phi, copy(node.control_lst), copy(node.time_lst)
-      )
-      if x_nxt is not None:
-        new_node_g = node.g + self.get_dist(node.x, node.y, x_nxt, y_nxt)
-        # new_node_h = self.get_dist(x_nxt, y_nxt, self.car.xt, self.car.yt) * 1.5
-        new_node_h = self.heuristic(x_nxt, y_nxt, self.car.xt, self.car.yt, theta_nxt)
-        new_node = self.Node(
-          x_nxt,
-          y_nxt, 
-          theta_nxt,
-          node,
-          new_node_g,
-          new_node_h,
-          control_lst,
-          time_lst
-        )        
-        neighbors.append(new_node)
+      nxt_node = self.get_nxt_node(node, phi) 
+      
+      if nxt_node is not None:
+        nxt_node.phi = phi
+        nxt_node.time = node.time + self.sim_times
+        nxt_node.parent = node
+        nxt_node.g = node.g + self.time_unit * self.sim_times
+        nxt_node.h = self.get_dist(nxt_node.x, nxt_node.y, self.car.xt, self.car.yt)
+        nxt_node.f = nxt_node.g + 2 * nxt_node.h
+        neighbors.append(nxt_node)
     return neighbors
 
-  def get_nxt_state(self, x, y, theta, phi, control_lst, time_lst):
+  def get_nxt_node(self, node, phi):
     """
     @input:
-      x, y, theta: current position and heading angle
-      phi: steering angle
-      control_lst: list of steering angles
-      time_lst: list of simulation time
+      node: current node
     
     @return:
       x, y, theta: next position and heading angle
       control_lst: updated list of steering angles
       time_lst: updated list of simulation time
     """
+    x, y, theta = node.x, node.y, node.theta
 
-    # If the car is turning, increase the simulation time
-    for sim_time in range(40 if phi != 0 else 20):
-      x, y, theta = step(self.car, x, y, theta, phi)
-      control_lst.append(phi)
-      time_lst.append(time_lst[-1] + self.time_resolution)
+    for _ in range(self.sim_times):
+      x, y, theta = step(self.car, x, y, theta, phi, dt=self.time_unit)
+  
+      if not self.check_reachable(x, y):
+        node = self.Node(x, y, theta)
+        self.closed_set[node.idx] = node
+        return None
 
       while theta > np.pi:
         theta -= 2 * np.pi
       while theta < -np.pi:
         theta += 2 * np.pi
 
-    if not self.check_reachable(x, y):
-      return None, None, None, None, None
-
-    return x, y, theta, control_lst, time_lst
+    nxt_node = self.Node(x, y, theta)
+    return nxt_node
 
   def check_reachable(self, x, y):
     # Check collision
     for obs in self.car.obs:
-      if self.get_dist(x, y, obs[0], obs[1]) <= obs[2] + 0.08:
+      if self.get_dist(x, y, obs[0], obs[1]) <= obs[2] + 0.15:
         return False
 
     # Check boundary
     if self.car.xlb < x < self.car.xub and self.car.ylb < y < self.car.yub:
       return True
-    else:
-      return False
+    return False
 
   class Node:
-    def __init__(self, x, y, theta, parent, g, h, control_lst, time_lst):
+    def __init__(self, x, y, theta):
+      # Resolutions
+      self.linear_res = 0.3
+      self.angular_res = 2.0 * np.pi / 6.0
+
+      # Index
+      x_idx = int(x / self.linear_res)
+      y_idx = int(y / self.linear_res)
+      theta_idx = int((theta % (2.0 * np.pi)) / self.angular_res)
+      self.idx = (x_idx, y_idx, theta_idx)
+
       # Pos
-      self.x = round(x , 1)
-      self.y = round(y , 1)
-      self.theta = round(theta, 2)
+      self.x = x
+      self.y = y  
+      self.theta = theta
 
       # Parent node
-      self.parent = parent
+      self.parent = None
 
       # Cost
-      self.g = g
-      self.h = h
-      self.f = (g + h)
+      self.g = 0
+      self.h = 0
+      self.f = 0
 
-      self.control_lst = control_lst
-      self.time_lst = time_lst
-    
-    def __eq__(self, other):
-      if other is None or not isinstance(other, AStar.Node):
-        return False
-      return (self.x, self.y, self.theta) == (other.x, other.y, other.theta)
-
-    def __hash__(self):
-      return hash((self.x, self.y, self.theta))
-    
-    def __lt__(self, other):
-      return self.f < other.f
-
-  class PriorityQueue:
-    def __init__(self):
-      self.queue = []
-      self.set = set()
-
-    def push(self, node):
-      heapq.heappush(self.queue, node)
-      self.set.add(node)
-
-    def pop(self):
-      node = heapq.heappop(self.queue)
-      self.set.remove(node)
-      return node
-
-    def __contains__(self, node):
-      return node in self.set
-
-    def empty(self):
-      return len(self.queue) == 0
+      self.phi = 0
+      self.time = 0
