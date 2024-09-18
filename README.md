@@ -29,7 +29,7 @@ while True:
 ### Usage
 
 ```bash
-make assignment_1
+make assignment1
 . ./devel/setup.zsh
 roslaunch irob_assignment_1 demo.launch
 ```
@@ -80,7 +80,7 @@ The python file:
 ### Usage
 
 ```bash
-make assignment_2
+make assignment2
 . ./devel/setup.zsh
 roslaunch kinematics_assignment kuka.launch # or scara.launch
 ```
@@ -100,9 +100,21 @@ roslaunch kinematics_assignment kuka.launch # or scara.launch
 ### Usage
 
 ```bash
-make assignment_3
+make assignment3
 python3 main.py -p
 ```
+
+### Description
+
+In [solution.py](./assignment_3_planning/solution.py), you're tasked to implement a robotic planning method in order to drive a Dubins car from an initial position (x0,y0) to a target position (xt, yt), while avoiding both collisions with obstacles and venturing out of bounds.
+
+The state variables are:
+
+- x: horizontal position
+- y: vertical position
+- theta: heading angle (direction of travel)
+
+And, the sole control variable is the steering angle phi ∈ [-pi/4, pi/4] (with respect to the direction of travel).
 
 ### A star algorithm
 
