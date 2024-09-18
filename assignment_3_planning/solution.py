@@ -25,7 +25,9 @@ class AStar:
     self.sim_times = 45
     self.time_unit = 0.01
     self.target_threshold = 1.0
-  
+
+    self.heuristic_weight = 1.3
+
     self.open_set = dict() # nodes to be evaluated
     self.closed_set = dict() # nodes already evaluated
 
@@ -75,14 +77,13 @@ class AStar:
         # Skip if the neighbor is already evaluated
         if neighbor.idx in self.closed_set:
           continue
+      
+        # Discover a new node
+        elif neighbor.idx not in self.open_set:
+          self.open_set[neighbor.idx] = neighbor  
 
-        # If the neighbor is already in the open set and has a lower f value
-        elif neighbor.idx in self.open_set and neighbor.f < self.open_set[neighbor.idx].f:
-          self.open_set[neighbor.idx] = neighbor
-
-        # If the neighbor is not in the open set or
-        # the cost to get to the neighbor from the current node is lower
-        elif neighbor.idx not in self.open_set or neighbor.g < current_nd.g:
+        # If the neighbor is already in the open set and has a lower g value
+        elif neighbor.idx in self.open_set and neighbor.g < self.open_set[neighbor.idx].g:
           self.open_set[neighbor.idx] = neighbor
 
   def get_track_path(self, node):
@@ -134,7 +135,7 @@ class AStar:
         nxt_node.parent = node
         nxt_node.g = node.g + self.time_unit * self.sim_times
         nxt_node.h = self.get_dist(nxt_node.x, nxt_node.y, self.car.xt, self.car.yt)
-        nxt_node.f = nxt_node.g + 2 * nxt_node.h
+        nxt_node.f = nxt_node.g + self.heuristic_weight * nxt_node.h
         neighbors.append(nxt_node)
     return neighbors
 
