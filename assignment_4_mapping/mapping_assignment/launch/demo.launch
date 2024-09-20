@@ -1,0 +1,10 @@
+<launch>
+  <arg name="state" default="1" />
+
+  <include file="$(find mapping_assignment)/launch/play.launch" />
+  
+  <node name="bag" pkg="rosbag" type="play" args="--clock $(find mapping_assignment)/bags/stage_$(arg state).bag" />
+  
+  <node pkg="mapping_assignment" name="mapping" type="main.py" output="screen" />
+
+</launch>

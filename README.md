@@ -5,6 +5,7 @@
 1. [Lab 1: Introduction to ROS](#lab-1-introduction-to-ros)
 2. [Lab 2: Inverse Kinematics](#lab-2-inverse-kinematics)
 3. [Lab 3: Path Planning](#lab-3-path-planning)
+4. [Lab 4: Mapping](#lab-4-mapping)
 
 ## Lab 1: Introduction to ROS
 
@@ -97,13 +98,6 @@ roslaunch kinematics_assignment kuka.launch # or scara.launch
 
 ## Lab 3: Path Planning
 
-### Usage
-
-```bash
-make assignment3
-python3 main.py -p
-```
-
 ### Description
 
 In [solution.py](./assignment_3_planning/solution.py), you're tasked to implement a robotic planning method in order to drive a Dubins car from an initial position (x0,y0) to a target position (xt, yt), while avoiding both collisions with obstacles and venturing out of bounds.
@@ -115,6 +109,13 @@ The state variables are:
 - theta: heading angle (direction of travel)
 
 And, the sole control variable is the steering angle phi ∈ [-pi/4, pi/4] (with respect to the direction of travel).
+
+### Usage
+
+```bash
+make assignment3
+python3 main.py -p
+```
 
 ### A star algorithm
 
@@ -144,3 +145,16 @@ Implement A* algorithm.
 2. [Github - PythonRobotics/PathPlanning/AStar/a_star.py](https://github.com/AtsushiSakai/PythonRobotics/blob/master/PathPlanning/AStar/a_star.py)
 
 3. [Instruction - Dubin's Car](./assignment_3_planning/README.md)
+
+## Lab 4: Mapping
+
+### Description
+
+### Usage
+
+```bash
+make assignment4
+. ./devel/setup.zsh
+```
+
+### References

@@ -2,6 +2,7 @@
 ASSIGNMENT_1 := assignment_1_ros_basic
 ASSIGNMENT_2 := assignment_2_inverse_kinematic
 ASSIGNMENT_3 := assignment_3_planning
+ASSIGNMENT_4 := assignment_4_mapping
 
 # Docker image names
 ROS_IMAGE := ros-noetic-zsh:latest
@@ -16,6 +17,9 @@ assignment2:
 
 assignment3:
 	$(MAKE) ASSIGNMENT_FOLDER=$(ASSIGNMENT_3) python
+
+assignment4:
+	$(MAKE) ASSIGNMENT_FOLDER=$(ASSIGNMENT_4) ros
 
 ros: build-ros run-ros clean-ros
 
