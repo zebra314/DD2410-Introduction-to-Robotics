@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 
 """
-    # {student full name}
+    # Ying Pei Lin
     # {student id}
-    # {student email}
+    # yplin@kth.se
 """
 
 # Python standard library
