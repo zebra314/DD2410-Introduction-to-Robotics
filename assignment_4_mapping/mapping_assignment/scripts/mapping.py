@@ -19,6 +19,7 @@ from local.map_msgs import OccupancyGridUpdate
 
 from grid_map import GridMap
 
+import sys
 
 class Mapping:
     def __init__(self, unknown_space, free_space, c_space, occupied_space,
@@ -146,18 +147,59 @@ class Mapping:
         """
 
         # Current yaw of the robot
-        robot_yaw = self.get_yaw(pose.pose.orientation)
+        yaw_robot = self.get_yaw(pose.pose.orientation)
+
         # The origin of the map [m, m, rad]. This is the real-world pose of the
         # cell (0,0) in the map.
         origin = grid_map.get_origin()
+
         # The map resolution [m/cell]
         resolution = grid_map.get_resolution()
 
-
         """
         Fill in your solution here
-        """
+        """        
 
+        # Calculate the robot's coordinates relative to the map
+        x_robot = pose.pose.position.x - origin.position.x
+        y_robot = pose.pose.position.y - origin.position.y
+
+        # Record the min and max of the updated map
+        # Used for the C part
+        x_max, y_max = 0, 0
+        x_min, y_min = sys.maxsize, sys.maxsize
+        
+        for i in range(len(scan.ranges)):
+
+            # Skip invalid measurements
+            if scan.ranges[i] <= scan.range_min or scan.ranges[i] >= scan.range_max:
+                continue
+
+            # Calculate the bearing of the laser scan
+            bearing = scan.angle_min + i * scan.angle_increment
+
+            # Calculate the obstacle coordinates relative to the map
+            x_obs = scan.ranges[i] * cos(bearing + yaw_robot ) + x_robot
+            y_obs = scan.ranges[i] * sin(bearing + yaw_robot ) + y_robot
+
+            # Convert the obstacle coordinates to map indices
+            x_obs = int(x_obs / resolution)
+            y_obs = int(y_obs / resolution)
+
+            # Update the min and max of the updated map
+            x_max = max(x_max, x_obs)
+            y_max = max(y_max, y_obs)
+            x_min = min(x_min, x_obs)
+            y_min = min(y_min, y_obs)
+
+            # Fill in the occupied cells
+            self.add_to_map(grid_map, x_obs, y_obs, self.occupied_space)
+
+            # Set the space between the robot and the obstacle as free space
+            traversed_cells = self.raytrace([int(x_robot / resolution), int(y_robot / resolution)], [x_obs, y_obs])
+            for traversed_cell in traversed_cells:
+                (x_traversed, y_traversed) = traversed_cell
+                self.add_to_map(grid_map, x_traversed, y_traversed, self.free_space)     
 
         """
         For C only!
@@ -166,15 +208,19 @@ class Mapping:
         # Only get the part that has been updated
         update = OccupancyGridUpdate()
         # The minimum x index in 'grid_map' that has been updated
-        update.x = 0
+        update.x = x_min
         # The minimum y index in 'grid_map' that has been updated
-        update.y = 0
+        update.y = y_min
         # Maximum x index - minimum x index + 1
-        update.width = 0
+        update.width = x_max - x_min + 1
         # Maximum y index - minimum y index + 1
-        update.height = 0
+        update.height = y_max - y_min + 1
         # The map data inside the rectangle, in row-major order.
         update.data = []
+
+        # for x in range(update.width):
+        #     for y in range(update.height):  
+        #         update.data.append(grid_map.__getitem__([x, y]))
 
         # Return the updated map together with only the
         # part of the map that has been updated
