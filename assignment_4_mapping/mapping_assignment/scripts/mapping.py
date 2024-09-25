@@ -218,9 +218,10 @@ class Mapping:
         # The map data inside the rectangle, in row-major order.
         update.data = []
 
-        # for x in range(update.width):
-        #     for y in range(update.height):  
-        #         update.data.append(grid_map.__getitem__([x, y]))
+        for w in range(update.width):
+            for h in range(update.height):
+                update.data.append(grid_map[update.x + w, update.y + h])
+                update.data.append(grid_map.__getitem__((w, h)))  
 
         # Return the updated map together with only the
         # part of the map that has been updated
@@ -255,7 +256,36 @@ class Mapping:
         """
         Fill in your solution here
         """
+        widths = grid_map.get_width()
+        heights = grid_map.get_height()
+        origin = grid_map.get_origin()
 
-        
+        # Create inflate offset parameters
+        inflation_offsets = set()
+        for x in range(-self.radius, self.radius + 1):
+            for y in range(-self.radius, self.radius + 1):
+                if x**2 + y**2 > self.radius**2:
+                    continue
+                inflation_offsets.add((x, y))
+        inflation_offsets = list(inflation_offsets)
+
+        # Loop through the grid map
+        for w in range(widths):
+            for h in range(heights):
+
+                if not grid_map[w, h] == self.occupied_space:
+                    continue
+
+                # Inflate the point
+                for offset in inflation_offsets:
+                    x_offset, y_offset = offset
+                    x_inflated = w + x_offset
+                    y_inflated = h + y_offset
+                    if not self.is_in_bounds(grid_map, x_inflated, y_inflated):
+                        continue
+                    if grid_map[x_inflated, y_inflated] == self.occupied_space:
+                        continue
+                    self.add_to_map(grid_map, x_inflated, y_inflated, self.c_space) 
+
         # Return the inflated map
         return grid_map
