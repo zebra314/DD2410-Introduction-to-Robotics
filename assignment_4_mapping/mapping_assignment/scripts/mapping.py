@@ -7,7 +7,7 @@
 """
 
 # Python standard library
-from math import cos, sin, atan2, fabs
+from math import cos, sin, atan2, fabs, sqrt
 
 # Numpy
 import numpy as np
@@ -18,8 +18,6 @@ from local.sensor_msgs import LaserScan
 from local.map_msgs import OccupancyGridUpdate
 
 from grid_map import GridMap
-
-import sys
 
 class Mapping:
     def __init__(self, unknown_space, free_space, c_space, occupied_space,
@@ -167,8 +165,10 @@ class Mapping:
         # Record the min and max of the updated map
         # Used for the C part
         x_max, y_max = 0, 0
-        x_min, y_min = sys.maxsize, sys.maxsize
-        
+        x_min, y_min = grid_map.get_width(), grid_map.get_height()            
+
+        obstacles = []
+
         for i in range(len(scan.ranges)):
 
             # Skip invalid measurements
@@ -186,20 +186,21 @@ class Mapping:
             x_obs = int(x_obs / resolution)
             y_obs = int(y_obs / resolution)
 
-            # Update the min and max of the updated map
-            x_max = max(x_max, x_obs)
-            y_max = max(y_max, y_obs)
-            x_min = min(x_min, x_obs)
-            y_min = min(y_min, y_obs)
-
-            # Fill in the occupied cells
-            self.add_to_map(grid_map, x_obs, y_obs, self.occupied_space)
+            # Record the obstacle coordinates
+            obstacles.append((x_obs, y_obs))
 
             # Set the space between the robot and the obstacle as free space
             traversed_cells = self.raytrace([int(x_robot / resolution), int(y_robot / resolution)], [x_obs, y_obs])
             for traversed_cell in traversed_cells:
                 (x_traversed, y_traversed) = traversed_cell
                 self.add_to_map(grid_map, x_traversed, y_traversed, self.free_space)     
+
+        # Set the obstacle space
+        for obstacle in obstacles:
+            (x_obs, y_obs) = obstacle
+            x_max, x_min = max(x_max, x_obs), min(x_min, x_obs)
+            y_max, y_min = max(y_max, y_obs), min(y_min, y_obs)
+            self.add_to_map(grid_map, x_obs, y_obs, self.occupied_space)
 
         """
         For C only!
@@ -221,11 +222,34 @@ class Mapping:
         for w in range(update.width):
             for h in range(update.height):
                 update.data.append(grid_map[update.x + w, update.y + h])
-                update.data.append(grid_map.__getitem__((w, h)))  
 
         # Return the updated map together with only the
         # part of the map that has been updated
         return grid_map, update
+
+    def expansion(self, point):
+        # Extend a point to an area with radius of self.radius
+        point_x = point[0]
+        point_y = point[1]
+        expanded_points = []
+        expanded_points.append([point_x + 4, point_y])
+        expanded_points.append([point_x - 4, point_y])
+        expanded_points.append([point_x, point_y + 4])
+        expanded_points.append([point_x, point_y - 4])
+
+        for i in range(4):
+            for j in range(4):
+                expanded_points.append([point_x + i, point_y + j])
+                expanded_points.append([point_x - i, point_y - j])
+                expanded_points.append([point_x + i, point_y - j])
+                expanded_points.append([point_x - i, point_y + j])
+
+        expanded_points.remove([point_x + 3, point_y + 3])
+        expanded_points.remove([point_x + 3, point_y - 3])
+        expanded_points.remove([point_x - 3, point_y + 3])
+        expanded_points.remove([point_x - 3, point_y - 3])
+
+        return expanded_points
 
     def inflate_map(self, grid_map):
         """For C only!
@@ -260,32 +284,28 @@ class Mapping:
         heights = grid_map.get_height()
         origin = grid_map.get_origin()
 
-        # Create inflate offset parameters
-        inflation_offsets = set()
-        for x in range(-self.radius, self.radius + 1):
-            for y in range(-self.radius, self.radius + 1):
-                if x**2 + y**2 > self.radius**2:
-                    continue
-                inflation_offsets.add((x, y))
-        inflation_offsets = list(inflation_offsets)
-
         # Loop through the grid map
         for w in range(widths):
             for h in range(heights):
 
-                if not grid_map[w, h] == self.occupied_space:
+                # Calculate the index of the cell
+                cell_x = int(origin.position.x + w)
+                cell_y = int(origin.position.y + h)
+                
+                # Skip if the cell is not occupied or out of bounds
+                if not self.is_in_bounds(grid_map, cell_x, cell_y):
+                    continue
+                if not grid_map[cell_x, cell_y] == self.occupied_space:
                     continue
 
-                # Inflate the point
-                for offset in inflation_offsets:
-                    x_offset, y_offset = offset
-                    x_inflated = w + x_offset
-                    y_inflated = h + y_offset
-                    if not self.is_in_bounds(grid_map, x_inflated, y_inflated):
-                        continue
-                    if grid_map[x_inflated, y_inflated] == self.occupied_space:
-                        continue
-                    self.add_to_map(grid_map, x_inflated, y_inflated, self.c_space) 
+                # Inflate the cell
+                expended_cells = self.expansion([cell_x, cell_y])
+                for expended_cell in expended_cells:
+
+                    # If the cell is already occupied, skip
+                    if grid_map[expended_cell[0], expended_cell[1]] == self.occupied_space:
+                        continue    
+                    self.add_to_map(grid_map, expended_cell[0], expended_cell[1], self.c_space)
 
         # Return the inflated map
         return grid_map

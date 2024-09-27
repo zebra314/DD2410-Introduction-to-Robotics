@@ -1,5 +1,5 @@
 <launch>
-  <arg name="state" default="1" />
+  <arg name="state" default="4" />
 
   <include file="$(find mapping_assignment)/launch/play.launch" />
   
